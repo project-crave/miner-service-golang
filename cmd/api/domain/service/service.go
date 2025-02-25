@@ -26,8 +26,16 @@ func (s *Service) Parse(step craveModel.Step, page craveModel.Page, name string,
 		return err
 	}
 	s.repo.Save(name, page, targets)
+	s.hubClient.ParseResult(name, s.getNames(targets), step)
 	return nil
-	//s.hubClient.ParseResult(step, name, targets)
+}
+
+func (s *Service) getNames(targets []model.ParsedTarget) []string {
+	targetNames := make([]string, len(targets))
+	for i, target := range targets {
+		targetNames[i] = target.Name
+	}
+	return targetNames
 }
 
 func (s *Service) getPageBusiness(page craveModel.Page) pageBusiness.IBusiness {
