@@ -53,7 +53,7 @@ func (ctnr *Container) DefineGrpc() error {
 		return fmt.Errorf("failed to listen : %d, %w", ctnr.Variable.GrpcApi.Port, err)
 	}
 	server := grpc.NewServer()
-	pb.RegisterMinerServer(server, ctnr.MinerHandler)
+	minerPb.RegisterMinerServer(server, ctnr.MinerHandler)
 	if servErr := server.Serve(lis); servErr != nil {
 		return fmt.Errorf("failed to create server: %w", err)
 	}
