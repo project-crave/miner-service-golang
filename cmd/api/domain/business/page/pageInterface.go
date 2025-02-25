@@ -16,9 +16,11 @@ func NewStrategy(pageMap map[craveModel.Page]IBusiness) *PageStrategy {
 }
 
 type IBusiness interface {
-	MakeUrl(step craveModel.Step, name string) string
+	MakeFrontUrl(name string) string
+	MakeBackUrl(name string) string
 	GetDocument(url string) (*goquery.Document, error)
-	ExtractTargets(doc *goquery.Document) ([]model.ParsedTarget, error)
+	ExtractFrontTargets(doc *goquery.Document) ([]model.ParsedTarget, error)
+	ExtractBackTargets(doc *goquery.Document) ([]model.ParsedTarget, error)
 	ParseNextTargets(step craveModel.Step, name string) ([]model.ParsedTarget, error)
 }
 

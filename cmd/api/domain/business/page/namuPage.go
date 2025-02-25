@@ -20,26 +20,27 @@ func NewNamuBusiness() *NamuBusiness {
 	return &NamuBusiness{}
 }
 
-func (biz *NamuBusiness) MakeUrl(step craveModel.Step, name string) string {
-	baseUrl := "https://namu.wiki/"
-	frontlink := "w/"
-	if craveModel.Front == step {
-		return baseUrl + frontlink + name
-	}
-	backlink := "backlink/"
-	if craveModel.Back == step {
-		return baseUrl + backlink + name
-	}
-	return ""
+func (biz *NamuBusiness) MakeFrontUrl(name string) string {
+	return "https://namu.wiki/w/" + name
+}
+
+func (biz *NamuBusiness) MakeBackUrl(name string) string {
+	return "https://namu.wiki/backlink/" + name
 }
 
 func (biz *NamuBusiness) ParseNextTargets(step craveModel.Step, name string) ([]model.ParsedTarget, error) {
-	url := biz.MakeUrl(step, name)
-	doc, err := biz.GetDocument(url)
-	if err != nil {
-		return nil, err
+
+	if craveModel.Front == step {
+		url := biz.MakeFrontUrl(name)
+		doc, _ := biz.GetDocument(url)
+		return biz.ExtractFrontTargets(doc)
 	}
-	return biz.ExtractTargets(doc)
+	if craveModel.Back == step {
+		url := biz.MakeBackUrl(name)
+		doc, _ := biz.GetDocument(url)
+		return biz.ExtractBackTargets(doc)
+	}
+	return nil, nil
 }
 
 func (biz *NamuBusiness) GetDocument(url string) (*goquery.Document, error) {
@@ -71,7 +72,7 @@ func (biz *NamuBusiness) GetDocument(url string) (*goquery.Document, error) {
 
 }
 
-func (biz *NamuBusiness) ExtractTargets(doc *goquery.Document) ([]model.ParsedTarget, error) {
+func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document) ([]model.ParsedTarget, error) {
 	targetMap := make(map[string]*model.ParsedTarget)
 	doc.Find("a[href^='/w/']").Each(func(i int, s *goquery.Selection) {
 		href, exists := s.Attr("href")
@@ -103,6 +104,67 @@ func (biz *NamuBusiness) ExtractTargets(doc *goquery.Document) ([]model.ParsedTa
 		}
 		targetMap[result].Appearance++
 	})
+	targets := make([]model.ParsedTarget, 0, len(targetMap))
+	for _, target := range targetMap {
+		targets = append(targets, *target)
+	}
+	sort.Slice(targets, func(i, j int) bool {
+		return targets[i].Appearance > targets[j].Appearance
+	})
+	return targets, nil
+}
+
+func (biz *NamuBusiness) ExtractBackTargets(doc *goquery.Document) ([]model.ParsedTarget, error) {
+	targetMap := make(map[string]*model.ParsedTarget)
+	firstPage := true
+	for {
+		doc.Find("a[href^='/w/']").Each(func(i int, s *goquery.Selection) {
+			href, exists := s.Attr("href")
+			if !exists {
+				return
+			}
+
+			input := strings.TrimPrefix(href, "/w/")
+
+			decodedString, err := url.QueryUnescape(input)
+			if err != nil {
+				fmt.Printf("Error decoding URL: %v\n", err)
+				return
+			}
+
+			indexOfHash := strings.Index(decodedString, "#")
+			result := decodedString
+			if indexOfHash != -1 {
+				result = decodedString[:indexOfHash]
+			}
+
+			if _, exists := targetMap[result]; !exists {
+				targetMap[result] = &model.ParsedTarget{
+					Name:       result,
+					Context:    "",
+					Appearance: 1,
+				}
+				return
+			}
+		})
+
+		nextLink := doc.Find("a[href^='/backlink/']")
+		if nextLink.Length() == 4 || firstPage {
+			nextLink = nextLink.Last()
+			firstPage = false
+			href, exists := nextLink.Attr("href")
+			if exists {
+				input := strings.TrimPrefix(href, "/backlink/")
+				if strings.Contains(input, "?from=") {
+					url := biz.MakeBackUrl(input)
+					doc, _ = biz.GetDocument(url)
+				}
+				continue
+			}
+			break
+		}
+		break
+	}
 	targets := make([]model.ParsedTarget, 0, len(targetMap))
 	for _, target := range targetMap {
 		targets = append(targets, *target)
