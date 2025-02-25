@@ -33,12 +33,12 @@ func (biz *NamuBusiness) ParseNextTargets(step craveModel.Step, name string) ([]
 	if craveModel.Front == step {
 		url := biz.MakeFrontUrl(name)
 		doc, _ := biz.GetDocument(url)
-		return biz.ExtractFrontTargets(doc)
+		return biz.ExtractFrontTargets(doc, name)
 	}
 	if craveModel.Back == step {
 		url := biz.MakeBackUrl(name)
 		doc, _ := biz.GetDocument(url)
-		return biz.ExtractBackTargets(doc)
+		return biz.ExtractBackTargets(doc, name)
 	}
 	return nil, nil
 }
@@ -72,7 +72,7 @@ func (biz *NamuBusiness) GetDocument(url string) (*goquery.Document, error) {
 
 }
 
-func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document) ([]model.ParsedTarget, error) {
+func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document, name string) ([]model.ParsedTarget, error) {
 	targetMap := make(map[string]*model.ParsedTarget)
 	doc.Find("a[href^='/w/']").Each(func(i int, s *goquery.Selection) {
 		href, exists := s.Attr("href")
@@ -85,6 +85,9 @@ func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document) ([]model.Par
 		decodedString, err := url.QueryUnescape(input)
 		if err != nil {
 			fmt.Printf("Error decoding URL: %v\n", err)
+			return
+		}
+		if decodedString == name {
 			return
 		}
 
@@ -114,7 +117,7 @@ func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document) ([]model.Par
 	return targets, nil
 }
 
-func (biz *NamuBusiness) ExtractBackTargets(doc *goquery.Document) ([]model.ParsedTarget, error) {
+func (biz *NamuBusiness) ExtractBackTargets(doc *goquery.Document, name string) ([]model.ParsedTarget, error) {
 	targetMap := make(map[string]*model.ParsedTarget)
 	firstPage := true
 	for {
@@ -129,6 +132,9 @@ func (biz *NamuBusiness) ExtractBackTargets(doc *goquery.Document) ([]model.Pars
 			decodedString, err := url.QueryUnescape(input)
 			if err != nil {
 				fmt.Printf("Error decoding URL: %v\n", err)
+				return
+			}
+			if decodedString == name {
 				return
 			}
 

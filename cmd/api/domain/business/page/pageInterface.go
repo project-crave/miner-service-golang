@@ -19,8 +19,8 @@ type IBusiness interface {
 	MakeFrontUrl(name string) string
 	MakeBackUrl(name string) string
 	GetDocument(url string) (*goquery.Document, error)
-	ExtractFrontTargets(doc *goquery.Document) ([]model.ParsedTarget, error)
-	ExtractBackTargets(doc *goquery.Document) ([]model.ParsedTarget, error)
+	ExtractFrontTargets(doc *goquery.Document, name string) ([]model.ParsedTarget, error)
+	ExtractBackTargets(doc *goquery.Document, name string) ([]model.ParsedTarget, error)
 	ParseNextTargets(step craveModel.Step, name string) ([]model.ParsedTarget, error)
 }
 
