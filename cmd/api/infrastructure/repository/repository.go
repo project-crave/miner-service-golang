@@ -5,6 +5,7 @@ import (
 	"crave/miner/cmd/model"
 	database "crave/shared/database"
 	craveModel "crave/shared/model"
+	"fmt"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
@@ -25,8 +26,7 @@ func (r *Repository) Save(name string, page craveModel.Page, targets []model.Par
 	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
 		sourceQuery := `
 			MERGE (s:Node {name: $name})
-			SET s:Source
-			RETURN s
+			SET s:Done
 			`
 		_, err := tx.Run(ctx, sourceQuery, map[string]interface{}{
 			"name": name,
@@ -36,19 +36,19 @@ func (r *Repository) Save(name string, page craveModel.Page, targets []model.Par
 		}
 
 		for _, target := range targets {
-			targetQuery := `
+			targetQuery := fmt.Sprintf(`
                 MERGE (t:Node {name: $targetName})
-                SET t:Target
                 WITH t
-                MATCH (s:Source {name: $sourceName})
-                MERGE (s)-[r:REFERENCES]->(t)
+                MATCH (s:Done {name: $sourceName})
+                MERGE (s)-[r:%s]->(t)
                 SET r.page = $page,
-                    r.context = $context
-                RETURN t, r
-            `
+                    r.context = $context,
+					r.appearance = $appearance
+            `, page.Name())
 			_, err := tx.Run(ctx, targetQuery, map[string]interface{}{
 				"targetName": target.Name,
 				"context":    target.Context,
+				"appearance": target.Appearance,
 				"page":       page,
 				"sourceName": name,
 			})
@@ -59,7 +59,7 @@ func (r *Repository) Save(name string, page craveModel.Page, targets []model.Par
 		return nil, nil
 	})
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return nil
