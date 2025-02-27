@@ -5,5 +5,5 @@ import (
 )
 
 type IController interface {
-	Parse(step craveModel.Step, page craveModel.Page, name string, filter craveModel.Filter) error
+	Parse(step craveModel.Step, page craveModel.Page, name string) ([]string, error)
 }

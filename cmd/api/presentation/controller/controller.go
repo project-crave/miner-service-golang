@@ -14,7 +14,6 @@ func NewController(svc service.IService) *Controller {
 }
 
 // Parse implements IController.
-func (c *Controller) Parse(step craveModel.Step, page craveModel.Page, name string, filter craveModel.Filter) error {
-	c.svc.Parse(step, page, name, filter)
-	return nil
+func (c *Controller) Parse(step craveModel.Step, page craveModel.Page, name string) ([]string, error) {
+	return c.svc.Parse(step, page, name)
 }

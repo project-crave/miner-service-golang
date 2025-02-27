@@ -19,15 +19,14 @@ func NewService(pageStrat *pageBusiness.PageStrategy, repo repository.IRepositor
 	return &Service{pageStrat: pageStrat, repo: repo, hubClient: hubClient}
 }
 
-func (s *Service) Parse(step craveModel.Step, page craveModel.Page, name string, filter craveModel.Filter) error {
+func (s *Service) Parse(step craveModel.Step, page craveModel.Page, name string) ([]string, error) {
 	pageBiz := s.getPageBusiness(page)
 	targets, err := s.getNextTargets(pageBiz, step, name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	s.repo.Save(name, page, targets)
-	s.hubClient.ParseResult(name, s.getNames(targets), step)
-	return nil
+	return s.getNames(targets), nil
 }
 
 func (s *Service) getNames(targets []model.ParsedTarget) []string {
