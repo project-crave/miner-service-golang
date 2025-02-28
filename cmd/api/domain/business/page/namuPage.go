@@ -1,6 +1,7 @@
 package business
 
 import (
+	filterBusiness "crave/miner/cmd/api/domain/business/filter"
 	"crave/miner/cmd/model"
 	craveModel "crave/shared/model"
 	"fmt"
@@ -28,25 +29,44 @@ func (biz *NamuBusiness) MakeBackUrl(name string) string {
 	return "https://namu.wiki/backlink/" + name
 }
 
-func (biz *NamuBusiness) ParseNextTargets(step craveModel.Step, name string) ([]model.ParsedTarget, error) {
+func (biz *NamuBusiness) ParseNextTargets(step craveModel.Step, filter filterBusiness.IBusiness, name string) ([]model.ParsedTarget, error) {
+
+	biz.delay()
 
 	if craveModel.Front == step {
 		url := biz.MakeFrontUrl(name)
-		doc, _ := biz.GetDocument(url)
-		return biz.ExtractFrontTargets(doc, name)
+		html, err := biz.GetHtml(url)
+		if err != nil {
+			return nil, err
+		}
+		doc, err := biz.GetDocument(html)
+		if err != nil {
+			return nil, err
+		}
+		return biz.ExtractFrontTargets(doc, filter, name)
 	}
 	if craveModel.Back == step {
 		url := biz.MakeBackUrl(name)
-		doc, _ := biz.GetDocument(url)
-		return biz.ExtractBackTargets(doc, name)
+		html, err := biz.GetHtml(url)
+		if err != nil {
+			return nil, err
+		}
+		doc, err := biz.GetDocument(html)
+		if err != nil {
+			return nil, err
+		}
+		return biz.ExtractBackTargets(doc, filter, name)
 	}
 	return nil, nil
 }
 
-func (biz *NamuBusiness) GetDocument(url string) (*goquery.Document, error) {
+func (biz *NamuBusiness) delay() {
+
+}
+
+func (biz *NamuBusiness) GetHtml(url string) (*string, error) {
 	client := &http.Client{}
 
-	// Create a new request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("🛑error creating request: %w", err)
@@ -59,11 +79,15 @@ func (biz *NamuBusiness) GetDocument(url string) (*goquery.Document, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
+		return nil, fmt.Errorf("🛑error reading response body: %w", err)
 	}
+	bodyString := string(body)
+	return &bodyString, nil
+}
 
+func (biz *NamuBusiness) GetDocument(html *string) (*goquery.Document, error) {
 	// Parse the HTML content
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(*html))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing HTML: %w", err)
 	}
@@ -174,7 +198,8 @@ func (biz *NamuBusiness) ExtractBackTargets(doc *goquery.Document, filter filter
 				input := strings.TrimPrefix(href, "/backlink/")
 				if strings.Contains(input, "?from=") {
 					url := biz.MakeBackUrl(input)
-					doc, _ = biz.GetDocument(url)
+					html, _ := biz.GetHtml(url)
+					doc, _ = biz.GetDocument(html)
 				}
 				continue
 			}

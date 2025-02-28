@@ -1,6 +1,7 @@
 package business
 
 import (
+	filterBusiness "crave/miner/cmd/api/domain/business/filter"
 	"crave/miner/cmd/model"
 	craveModel "crave/shared/model"
 
@@ -18,10 +19,12 @@ func NewStrategy(pageMap map[craveModel.Page]IBusiness) *PageStrategy {
 type IBusiness interface {
 	MakeFrontUrl(name string) string
 	MakeBackUrl(name string) string
-	GetDocument(url string) (*goquery.Document, error)
-	ExtractFrontTargets(doc *goquery.Document, name string) ([]model.ParsedTarget, error)
-	ExtractBackTargets(doc *goquery.Document, name string) ([]model.ParsedTarget, error)
-	ParseNextTargets(step craveModel.Step, name string) ([]model.ParsedTarget, error)
+	GetHtml(url string) (*string, error)
+	GetDocument(html *string) (*goquery.Document, error)
+	ExtractFrontTargets(doc *goquery.Document, filter filterBusiness.IBusiness, name string) ([]model.ParsedTarget, error)
+	ExtractBackTargets(doc *goquery.Document, filter filterBusiness.IBusiness, name string) ([]model.ParsedTarget, error)
+	ParseNextTargets(step craveModel.Step, filter filterBusiness.IBusiness, name string) ([]model.ParsedTarget, error)
+	ApplyFilter(name string, filterBiz filterBusiness.FilterChain) (craveModel.Filter, error)
 }
 
 func (strat *PageStrategy) GetPageBusiness(page craveModel.Page) IBusiness {
