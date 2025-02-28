@@ -237,3 +237,12 @@ func (biz *NamuBusiness) ExtractContext(s *goquery.Selection, name string) strin
 	}
 	return sentences[0]
 }
+
+func (biz *NamuBusiness) ApplyFilter(name string, filterChain filterBusiness.FilterChain) (craveModel.Filter, error) {
+	url := biz.MakeFrontUrl(name)
+	html, err := biz.GetHtml(url)
+	if err != nil {
+		return -1, err
+	}
+	return filterChain.Apply(html), nil
+}

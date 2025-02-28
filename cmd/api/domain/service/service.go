@@ -48,6 +48,18 @@ func (s *Service) getPageBusiness(page craveModel.Page) pageBusiness.IBusiness {
 	return s.pageStrat.GetPageBusiness(page)
 }
 
-func (s *Service) getNextTargets(page pageBusiness.IBusiness, step craveModel.Step, name string) ([]model.ParsedTarget, error) {
-	return page.ParseNextTargets(step, name)
+func (s *Service) getNextTargets(page pageBusiness.IBusiness, filter filterBusiness.IBusiness, step craveModel.Step, name string) ([]model.ParsedTarget, error) {
+	return page.ParseNextTargets(step, filter, name)
+}
+
+func (s *Service) Filter(name string, page craveModel.Page, filter craveModel.Filter) (int64, error) {
+	pageBiz := s.getPageBusiness(page)
+	filterChain := s.getFilterChain(filter)
+
+	filteredBy, err := pageBiz.ApplyFilter(name, *filterChain)
+	return int64(filteredBy), err
+}
+
+func (s *Service) getFilterChain(filter craveModel.Filter) *filterBusiness.FilterChain {
+	return s.filterStrat.GetFilterChain(filter)
 }
