@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	filterBusiness "crave/miner/cmd/api/domain/business/filter"
 	pageBusiness "crave/miner/cmd/api/domain/business/page"
 	service "crave/miner/cmd/api/domain/service"
 	"crave/miner/cmd/api/infrastructure/externalApi"
@@ -28,6 +29,7 @@ type Container struct {
 	MinerHandler    handler.IHandler
 	MinerService    service.IService
 	HubGrpcClient   hubPb.HubClient
+	FilterStrategy  *filterBusiness.FilterStrategy
 	PageStrategy    *pageBusiness.PageStrategy
 	MinerRepository repository.IRepository
 	HubClient       externalApi.IHubClient
@@ -82,11 +84,16 @@ func (ctnr *Container) InitDependency(neo4j any) error {
 	ctnr.MinerRepository = repository.NewRepository(ctnr.Neo4j)
 	ctnr.DefineGrpcClient()
 	ctnr.HubClient = externalApi.NewHubClient("", ctnr.HubGrpcClient)
+	filterMap := map[craveModel.Filter]filterBusiness.IBusiness{
+		craveModel.NAME:   filterBusiness.NewNameBusiness(),
+		craveModel.PERSON: filterBusiness.NewPersonBusiness(),
+	}
+	ctnr.FilterStrategy = filterBusiness.NewStrategy(filterMap)
 	pageMap := map[craveModel.Page]pageBusiness.IBusiness{
 		craveModel.NamuWiki: pageBusiness.NewNamuBusiness(),
 	}
 	ctnr.PageStrategy = pageBusiness.NewStrategy(pageMap)
-	ctnr.MinerService = service.NewService(ctnr.PageStrategy, ctnr.MinerRepository, ctnr.HubClient)
+	ctnr.MinerService = service.NewService(ctnr.PageStrategy, ctnr.FilterStrategy, ctnr.MinerRepository, ctnr.HubClient)
 	ctnr.MinerController = controller.NewController(ctnr.MinerService)
 	ctnr.MinerHandler = handler.NewHandler(ctnr.MinerController)
 	return nil
@@ -105,6 +112,7 @@ func (ctnr *Container) DefineGrpcClient() error {
 }
 
 func NewContainer(router *gin.Engine) *Container {
+
 	ctnr := &Container{}
 	ctnr.InitVariable()
 	ctnr.InitDependency(nil)
