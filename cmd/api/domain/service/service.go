@@ -1,6 +1,7 @@
 package service
 
 import (
+	filterBusiness "crave/miner/cmd/api/domain/business/filter"
 	pageBusiness "crave/miner/cmd/api/domain/business/page"
 	"crave/miner/cmd/api/infrastructure/externalApi"
 	"crave/miner/cmd/api/infrastructure/repository"
@@ -10,23 +11,29 @@ import (
 )
 
 type Service struct {
-	pageStrat *pageBusiness.PageStrategy
-	repo      repository.IRepository
-	hubClient externalApi.IHubClient
+	pageStrat   *pageBusiness.PageStrategy
+	filterStrat *filterBusiness.FilterStrategy
+	repo        repository.IRepository
+	hubClient   externalApi.IHubClient
 }
 
-func NewService(pageStrat *pageBusiness.PageStrategy, repo repository.IRepository, hubClient externalApi.IHubClient) *Service {
-	return &Service{pageStrat: pageStrat, repo: repo, hubClient: hubClient}
+func NewService(pageStrat *pageBusiness.PageStrategy, filterStrat *filterBusiness.FilterStrategy, repo repository.IRepository, hubClient externalApi.IHubClient) *Service {
+	return &Service{pageStrat: pageStrat, filterStrat: filterStrat, repo: repo, hubClient: hubClient}
 }
 
 func (s *Service) Parse(step craveModel.Step, page craveModel.Page, name string) ([]string, error) {
 	pageBiz := s.getPageBusiness(page)
-	targets, err := s.getNextTargets(pageBiz, step, name)
+	nameFilterBiz := s.getNameFilterBusiness()
+	targets, err := s.getNextTargets(pageBiz, nameFilterBiz, step, name)
 	if err != nil {
 		return nil, err
 	}
 	s.repo.Save(name, page, targets)
 	return s.getNames(targets), nil
+}
+
+func (s *Service) getNameFilterBusiness() filterBusiness.IBusiness {
+	return s.filterStrat.GetNameFilterBusiness()
 }
 
 func (s *Service) getNames(targets []model.ParsedTarget) []string {

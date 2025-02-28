@@ -72,7 +72,11 @@ func (biz *NamuBusiness) GetDocument(url string) (*goquery.Document, error) {
 
 }
 
-func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document, name string) ([]model.ParsedTarget, error) {
+func (biz *NamuBusiness) detectBlock(bodyString string) bool {
+	return strings.Contains(bodyString, "<h1> 비정상")
+}
+
+func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document, filter filterBusiness.IBusiness, name string) ([]model.ParsedTarget, error) {
 	targetMap := make(map[string]*model.ParsedTarget)
 	doc.Find("a[href^='/w/']").Each(func(i int, s *goquery.Selection) {
 		href, exists := s.Attr("href")
@@ -96,6 +100,9 @@ func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document, name string)
 		if indexOfHash != -1 {
 			result = decodedString[:indexOfHash]
 		}
+		if filter.Apply(&result) != 0 {
+			return
+		}
 		if _, exists := targetMap[result]; !exists {
 			context := biz.ExtractContext(s, result)
 			targetMap[result] = &model.ParsedTarget{
@@ -117,7 +124,7 @@ func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document, name string)
 	return targets, nil
 }
 
-func (biz *NamuBusiness) ExtractBackTargets(doc *goquery.Document, name string) ([]model.ParsedTarget, error) {
+func (biz *NamuBusiness) ExtractBackTargets(doc *goquery.Document, filter filterBusiness.IBusiness, name string) ([]model.ParsedTarget, error) {
 	targetMap := make(map[string]*model.ParsedTarget)
 	firstPage := true
 	for {
@@ -142,6 +149,10 @@ func (biz *NamuBusiness) ExtractBackTargets(doc *goquery.Document, name string) 
 			result := decodedString
 			if indexOfHash != -1 {
 				result = decodedString[:indexOfHash]
+			}
+
+			if filter.Apply(&result) != 0 {
+				return
 			}
 
 			if _, exists := targetMap[result]; !exists {
