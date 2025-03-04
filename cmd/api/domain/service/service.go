@@ -6,7 +6,6 @@ import (
 	"crave/miner/cmd/api/infrastructure/externalApi"
 	"crave/miner/cmd/api/infrastructure/repository"
 	"crave/miner/cmd/model"
-
 	craveModel "crave/shared/model"
 )
 

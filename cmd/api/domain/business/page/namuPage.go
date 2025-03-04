@@ -61,7 +61,12 @@ func (biz *NamuBusiness) ParseNextTargets(step craveModel.Step, filter filterBus
 }
 
 func (biz *NamuBusiness) delay() {
-
+	// for {
+	// 	if time.Since(biz.lastTime) >= 13*time.Second {
+	// 		break
+	// 	}
+	// }
+	// biz.lastTime = time.Now()
 }
 
 func (biz *NamuBusiness) GetHtml(url string) (*string, error) {
@@ -82,6 +87,11 @@ func (biz *NamuBusiness) GetHtml(url string) (*string, error) {
 		return nil, fmt.Errorf("🛑error reading response body: %w", err)
 	}
 	bodyString := string(body)
+
+	if biz.detectBlock(bodyString) {
+		return nil, fmt.Errorf("🛑blocking is detected: %w", err)
+	}
+
 	return &bodyString, nil
 }
 
@@ -97,7 +107,7 @@ func (biz *NamuBusiness) GetDocument(html *string) (*goquery.Document, error) {
 }
 
 func (biz *NamuBusiness) detectBlock(bodyString string) bool {
-	return strings.Contains(bodyString, "<h1> 비정상")
+	return strings.Contains(bodyString, "<h1>비정상")
 }
 
 func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document, filter filterBusiness.IBusiness, name string) ([]model.ParsedTarget, error) {
@@ -240,6 +250,7 @@ func (biz *NamuBusiness) ExtractContext(s *goquery.Selection, name string) strin
 
 func (biz *NamuBusiness) ApplyFilter(name string, filterChain filterBusiness.FilterChain) (craveModel.Filter, error) {
 	url := biz.MakeFrontUrl(name)
+	biz.delay()
 	html, err := biz.GetHtml(url)
 	if err != nil {
 		return -1, err
