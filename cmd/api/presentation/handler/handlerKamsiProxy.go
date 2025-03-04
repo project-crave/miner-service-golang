@@ -22,8 +22,14 @@ func NewHandlerKamsiProxy(kamsi *kamsi.Kamsi, hdr IHandler) *HandlerKamsiProxy {
 func (h *HandlerKamsiProxy) Parse(ctx context.Context, req *pb.ParseRequest) (*pb.ParseResponse, error) {
 	start := time.Now()
 	res, err := h.hdr.Parse(ctx, req)
-	go h.kamsi.Timing("MinerHandler", "Parse", fmt.Sprintf("%s.parseDuration", req.Name), int64(time.Since(start)/time.Millisecond))
-	go h.kamsi.Increment("MinerHandler", "Parse", fmt.Sprintf("target.%s.NumbernextTarget", req.Name), int64(len(res.Targets)))
+
+	h.kamsi.Timing("MinerHandler", "Parse", fmt.Sprintf("target.%s.parse", req.Name), int64(time.Since(start)/time.Millisecond))
+	h.kamsi.IntGauge("MinerHandler", "Parse", fmt.Sprintf("target.%s.parse.nextTarget", req.Name), func(err error) int64 {
+		if err != nil {
+			return -1
+		}
+		return int64(len(res.Targets))
+	}(err))
 	return res, err
 }
 
@@ -34,7 +40,7 @@ func (h *HandlerKamsiProxy) Parse(ctx context.Context, req *pb.ParseRequest) (*p
 func (h *HandlerKamsiProxy) Filter(ctx context.Context, req *pb.FilterRequest) (*pb.FilterResponse, error) {
 	start := time.Now()
 	res, err := h.hdr.Filter(ctx, req)
-	go h.kamsi.Timing("MinerHandler", "Filter", fmt.Sprintf("%s.filterDuration", req.Name), int64(time.Since(start)/time.Millisecond))
-	go h.kamsi.Increment("MinerHandler", "Filter", fmt.Sprintf("filter.%s", req.Name), int64(len(req.Name)))
+	h.kamsi.Timing("MinerHandler", "Filter", fmt.Sprintf("target.%s.filter", req.Name), int64(time.Since(start)/time.Millisecond))
+	h.kamsi.Increment("MinerHandler", "Filter", fmt.Sprintf("target.%s.filter.response", req.Name), 1)
 	return res, err
 }
