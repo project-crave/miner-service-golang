@@ -9,6 +9,8 @@ import (
 	controller "crave/miner/cmd/api/presentation/controller"
 	handler "crave/miner/cmd/api/presentation/handler"
 	craveDatabase "crave/shared/database"
+	kamsi "crave/shared/middleware/kamsi/cmd/configuration"
+
 	craveModel "crave/shared/model"
 	craveGzip "crave/shared/proto/gzip"
 	hubPb "crave/shared/proto/hub"
@@ -25,6 +27,7 @@ import (
 type Container struct {
 	Router          *gin.Engine
 	Variable        *Variable
+	KamsiCtnr       *kamsi.Container
 	MinerController controller.IController
 	MinerHandler    handler.IHandler
 	MinerService    service.IService
@@ -80,6 +83,7 @@ func (ctnr *Container) GetHttpHandler() http.Handler {
 }
 
 func (ctnr *Container) InitDependency(neo4j any) error {
+	ctnr.KamsiCtnr = kamsi.NewContainer(nil)
 	ctnr.DefineDatabase()
 	ctnr.MinerRepository = repository.NewRepository(ctnr.Neo4j)
 	ctnr.DefineGrpcClient()
@@ -95,7 +99,7 @@ func (ctnr *Container) InitDependency(neo4j any) error {
 	ctnr.PageStrategy = pageBusiness.NewStrategy(pageMap)
 	ctnr.MinerService = service.NewService(ctnr.PageStrategy, ctnr.FilterStrategy, ctnr.MinerRepository, ctnr.HubClient)
 	ctnr.MinerController = controller.NewController(ctnr.MinerService)
-	ctnr.MinerHandler = handler.NewHandler(ctnr.MinerController)
+	ctnr.MinerHandler = handler.NewHandlerKamsiProxy(ctnr.KamsiCtnr.Kamsi, handler.NewHandler(ctnr.MinerController))
 	return nil
 }
 
