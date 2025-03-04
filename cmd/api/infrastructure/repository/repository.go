@@ -64,3 +64,36 @@ func (r *Repository) Save(name string, page craveModel.Page, targets []model.Par
 
 	return nil
 }
+
+func (r *Repository) Remove(name string) error {
+	ctx := context.Background()
+	session := r.neo4j.NewSession(ctx)
+	defer session.Close(ctx)
+
+	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
+		query := `
+			MATCH (n:Node {name: $name})
+			DETACH DELETE n
+		`
+		result, err := tx.Run(ctx, query, map[string]interface{}{
+			"name": name,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		summary, err := result.Consume(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if summary.Counters().NodesDeleted() == 0 {
+			return nil, fmt.Errorf("node with name '%s' not found", name)
+		}
+		return nil, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

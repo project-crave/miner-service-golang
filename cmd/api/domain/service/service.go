@@ -57,6 +57,9 @@ func (s *Service) Filter(name string, page craveModel.Page, filter craveModel.Fi
 	filterChain := s.getFilterChain(filter)
 
 	filteredBy, err := pageBiz.ApplyFilter(name, *filterChain)
+	if filteredBy != 0 {
+		s.repo.Remove(name)
+	}
 	return int64(filteredBy), err
 }
 

@@ -7,4 +7,5 @@ import (
 
 type IRepository interface {
 	Save(name string, page craveModel.Page, targets []model.ParsedTarget) error
+	Remove(name string) error
 }
