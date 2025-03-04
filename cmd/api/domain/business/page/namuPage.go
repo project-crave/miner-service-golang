@@ -2,11 +2,10 @@ package business
 
 import (
 	filterBusiness "crave/miner/cmd/api/domain/business/filter"
+	page "crave/miner/cmd/api/infrastructure/externalApi/page"
 	"crave/miner/cmd/model"
 	craveModel "crave/shared/model"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -15,10 +14,11 @@ import (
 )
 
 type NamuBusiness struct {
+	clnt page.IClient
 }
 
-func NewNamuBusiness() *NamuBusiness {
-	return &NamuBusiness{}
+func NewNamuBusiness(clnt page.IClient) *NamuBusiness {
+	return &NamuBusiness{clnt: clnt}
 }
 
 func (biz *NamuBusiness) MakeFrontUrl(name string) string {
@@ -31,11 +31,9 @@ func (biz *NamuBusiness) MakeBackUrl(name string) string {
 
 func (biz *NamuBusiness) ParseNextTargets(step craveModel.Step, filter filterBusiness.IBusiness, name string) ([]model.ParsedTarget, error) {
 
-	biz.delay()
-
 	if craveModel.Front == step {
 		url := biz.MakeFrontUrl(name)
-		html, err := biz.GetHtml(url)
+		html, err := biz.clnt.GetHtml(url)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +45,7 @@ func (biz *NamuBusiness) ParseNextTargets(step craveModel.Step, filter filterBus
 	}
 	if craveModel.Back == step {
 		url := biz.MakeBackUrl(name)
-		html, err := biz.GetHtml(url)
+		html, err := biz.clnt.GetHtml(url)
 		if err != nil {
 			return nil, err
 		}
@@ -60,41 +58,6 @@ func (biz *NamuBusiness) ParseNextTargets(step craveModel.Step, filter filterBus
 	return nil, nil
 }
 
-func (biz *NamuBusiness) delay() {
-	// for {
-	// 	if time.Since(biz.lastTime) >= 13*time.Second {
-	// 		break
-	// 	}
-	// }
-	// biz.lastTime = time.Now()
-}
-
-func (biz *NamuBusiness) GetHtml(url string) (*string, error) {
-	client := &http.Client{}
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("🛑error creating request: %w", err)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("🛑error sending request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("🛑error reading response body: %w", err)
-	}
-	bodyString := string(body)
-
-	if biz.detectBlock(bodyString) {
-		return nil, fmt.Errorf("🛑blocking is detected: %w", err)
-	}
-
-	return &bodyString, nil
-}
-
 func (biz *NamuBusiness) GetDocument(html *string) (*goquery.Document, error) {
 	// Parse the HTML content
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(*html))
@@ -104,10 +67,6 @@ func (biz *NamuBusiness) GetDocument(html *string) (*goquery.Document, error) {
 
 	return doc, nil
 
-}
-
-func (biz *NamuBusiness) detectBlock(bodyString string) bool {
-	return strings.Contains(bodyString, "<h1>비정상")
 }
 
 func (biz *NamuBusiness) ExtractFrontTargets(doc *goquery.Document, filter filterBusiness.IBusiness, name string) ([]model.ParsedTarget, error) {
@@ -208,7 +167,10 @@ func (biz *NamuBusiness) ExtractBackTargets(doc *goquery.Document, filter filter
 				input := strings.TrimPrefix(href, "/backlink/")
 				if strings.Contains(input, "?from=") {
 					url := biz.MakeBackUrl(input)
-					html, _ := biz.GetHtml(url)
+					html, err := biz.clnt.GetHtml(url)
+					if err != nil {
+						break
+					}
 					doc, _ = biz.GetDocument(html)
 				}
 				continue
@@ -250,8 +212,8 @@ func (biz *NamuBusiness) ExtractContext(s *goquery.Selection, name string) strin
 
 func (biz *NamuBusiness) ApplyFilter(name string, filterChain filterBusiness.FilterChain) (craveModel.Filter, error) {
 	url := biz.MakeFrontUrl(name)
-	biz.delay()
-	html, err := biz.GetHtml(url)
+
+	html, err := biz.clnt.GetHtml(url)
 	if err != nil {
 		return -1, err
 	}

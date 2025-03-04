@@ -5,6 +5,7 @@ import (
 	pageBusiness "crave/miner/cmd/api/domain/business/page"
 	service "crave/miner/cmd/api/domain/service"
 	"crave/miner/cmd/api/infrastructure/externalApi"
+	pageApi "crave/miner/cmd/api/infrastructure/externalApi/page"
 	"crave/miner/cmd/api/infrastructure/repository"
 	controller "crave/miner/cmd/api/presentation/controller"
 	handler "crave/miner/cmd/api/presentation/handler"
@@ -94,7 +95,7 @@ func (ctnr *Container) InitDependency(neo4j any) error {
 	}
 	ctnr.FilterStrategy = filterBusiness.NewStrategy(filterMap)
 	pageMap := map[craveModel.Page]pageBusiness.IBusiness{
-		craveModel.NamuWiki: pageBusiness.NewNamuBusiness(),
+		craveModel.NamuWiki: pageBusiness.NewNamuBusiness(pageApi.NewNamuClient()),
 	}
 	ctnr.PageStrategy = pageBusiness.NewStrategy(pageMap)
 	ctnr.MinerService = service.NewService(ctnr.PageStrategy, ctnr.FilterStrategy, ctnr.MinerRepository, ctnr.HubClient)
