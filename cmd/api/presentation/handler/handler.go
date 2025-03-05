@@ -39,3 +39,11 @@ func (h *Handler) Filter(ctx context.Context, req *pb.FilterRequest) (*pb.Filter
 	}
 	return &pb.FilterResponse{FilteredBy: filterBy}, err
 }
+
+func (h *Handler) Refine(ctx context.Context, req *pb.RefineRequest) (*pb.RefineResponse, error) {
+	targets, err := h.ctrl.Refine(req.Name, craveModel.Page(req.Page), craveModel.Step(req.Step), craveModel.Filter(req.Filter))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to refine targets")
+	}
+	return &pb.RefineResponse{Targets: targets}, err
+}

@@ -20,3 +20,7 @@ func (c *Controller) Parse(step craveModel.Step, page craveModel.Page, name stri
 func (c *Controller) Filter(name string, page craveModel.Page, filter craveModel.Filter) (int64, error) {
 	return c.svc.Filter(name, page, filter)
 }
+
+func (c *Controller) Refine(name string, page craveModel.Page, step craveModel.Step, filter craveModel.Filter) ([]string, error) {
+	return c.svc.Refine(name, page, step, filter)
+}

@@ -7,6 +7,7 @@ import (
 	"crave/miner/cmd/api/infrastructure/repository"
 	"crave/miner/cmd/model"
 	craveModel "crave/shared/model"
+	"sync"
 )
 
 type Service struct {
@@ -64,4 +65,47 @@ func (s *Service) Filter(name string, page craveModel.Page, filter craveModel.Fi
 
 func (s *Service) getFilterChain(filter craveModel.Filter) *filterBusiness.FilterChain {
 	return s.filterStrat.GetFilterChain(filter)
+}
+
+func (s *Service) Refine(name string, page craveModel.Page, step craveModel.Step, filter craveModel.Filter) ([]string, error) {
+	pageBiz := s.getPageBusiness(page)
+	nameFilterBiz := s.getNameFilterBusiness()
+	targets, err := s.getNextTargets(pageBiz, nameFilterBiz, step, name)
+	if err != nil {
+		return nil, err
+	}
+
+	filterChain := s.getFilterChain(filter)
+
+	filteredBy, _ := pageBiz.ApplyFilter(name, *filterChain)
+	s.repo.SaveOrigin(name, (int64(filter) &^ int64(filteredBy)))
+
+	indicesToRemove := make(map[int]bool)
+
+	var wg sync.WaitGroup
+	for i, target := range targets {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			filteredBy, err := pageBiz.ApplyFilter(target.Name, *filterChain)
+			if err != nil {
+				return
+			}
+			if filteredBy != 0 {
+				indicesToRemove[i] = true
+			}
+			s.repo.SaveDestination(name, &target, page, (int64(filter) &^ int64(filteredBy)))
+		}()
+
+	}
+	wg.Wait()
+
+	var refinedTargetNames []model.ParsedTarget
+	for i, target := range targets {
+		if !indicesToRemove[i] {
+			refinedTargetNames = append(refinedTargetNames, target)
+		}
+	}
+
+	return s.getNames(refinedTargetNames), nil
 }
