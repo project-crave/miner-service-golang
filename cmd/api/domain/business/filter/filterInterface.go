@@ -2,6 +2,7 @@ package business
 
 import (
 	craveModel "crave/shared/model"
+	"sync"
 )
 
 type IBusiness interface {
@@ -36,11 +37,21 @@ func (strat *FilterStrategy) GetFilterChain(filter craveModel.Filter) *FilterCha
 
 func (fc *FilterChain) Apply(html *string) craveModel.Filter {
 	var filteredBy craveModel.Filter
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
 	for _, filter := range fc.filters {
-		result := filter.Apply(html)
-		if result != 0 {
-			filteredBy |= result
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			result := filter.Apply(html)
+			if result != 0 {
+				mu.Lock()
+				filteredBy |= result
+				mu.Unlock()
+			}
+		}()
 	}
+	wg.Wait()
 	return filteredBy //return 0 when it is pass
 }
