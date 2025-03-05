@@ -17,19 +17,19 @@ func (biz *NameBusiness) GetFilterFlag() craveModel.Filter {
 }
 
 func (biz *NameBusiness) Apply(name *string) craveModel.Filter {
-	if biz.containsDateFormat(name) || biz.containsSpecialChars(name) || biz.containsChinese(name) || biz.containsWord(name) {
+	if biz.containsDateFormat(name) || biz.containsSpecialChars(name) || biz.containsChineseCharacter(name) || biz.containsWord(name) {
 		return biz.GetFilterFlag()
 	}
 	return 0
 }
 
 func (biz *NameBusiness) containsWord(name *string) bool {
-	pattern := `\b(분류|출생|대한민국)\b`
+	pattern := `\b(분류|출생|대한민국|미국|중국)\b`
 	re := regexp.MustCompile(pattern)
 	return re.MatchString(*name)
 }
 
-func (biz *NameBusiness) containsChinese(name *string) bool {
+func (biz *NameBusiness) containsChineseCharacter(name *string) bool {
 	pattern := `[\p{Han}]`
 	re := regexp.MustCompile(pattern)
 	return re.MatchString(*name)
@@ -49,6 +49,5 @@ func (biz *NameBusiness) containsDateFormat(name *string) bool {
 
 	return re.MatchString(*name)
 }
-
 
 //룩삼 <-> 김진효 필터
